@@ -9,7 +9,7 @@ namespace ConsoleApp1.LogicGame
     public class Effect
     {
         public string Name { get; set; }
-        public int Duration { get; set; }
+        public int Duration { get; set; } // Продолжительность эффекта в ходах
         public Action<IWarrior> ApplyEffect { get; set; }
         public Action<IWarrior> TickEffect { get; set; }
         public Action<IWarrior> RemoveEffect { get; set; }

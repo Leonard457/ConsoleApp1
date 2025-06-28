@@ -8,25 +8,27 @@ namespace ConsoleApp1.LogicGame
         public string Name { get; protected set; }
         public abstract string ClassName { get; }
         public int Health { get; set; }
-        public int MaxHealth { get; protected set; }
+        public int MaxHealth { get;  set; }
         public int Stamina { get; set; }
-        public int MaxStamina { get; protected set; }
+        public int MaxStamina { get;  set; }
         public int Mana { get; set; }
-        public int MaxMana { get; protected set; }
-        public int AttackDamage { get; protected set; }
-        public int Armor { get; protected set; }
-        public double CritChance { get; protected set; } 
-        public double EvasionChance { get; protected set; } 
-        public bool IsDefending { get; set; } 
+        public int MaxMana { get;  set; }
+        public int AttackDamage { get;  set; }
+        public int Armor { get;  set; }
+        public double CritChance { get;  set; } 
+        public double EvasionChance { get;  set; } 
+        public bool IsDefending { get; set; }
+        public int CountActions { get; } = 4; // Количество действий в текущем ходе
         public List<Effect> ActiveEffects { get; private set; } = new List<Effect>();
 
         protected static Random random = new Random(); 
 
         protected const int BASE_ATTACK_STAMINA_COST = 15; 
         protected const int DEFEND_STAMINA_COST = 20; 
-        protected const int HEAL_STAMINA_COST = 10;
-        protected const int HEAL_HP_GAIN = 20; 
+        protected const int HEAL_STAMINA_COST = 20;
+        protected const int HEAL_HP_GAIN = 10; 
         protected const int SKIP_STAMINA_GAIN = 30;
+
 
         public bool IsAlive => Health > 0;
 
@@ -50,17 +52,16 @@ namespace ConsoleApp1.LogicGame
             if (Stamina >= BASE_ATTACK_STAMINA_COST)
             {
                 DrainStamina(BASE_ATTACK_STAMINA_COST);
-                int damage = CritChance > RandomNumberGenerator.NextDouble() ? (int)(AttackDamage * 1.5) : AttackDamage;
+                int damage = CritChance > RandomNumberGenerator.NextDouble() ? (AttackDamage * 2) : AttackDamage;
                 bool isCritical = damage > AttackDamage;
                 if (target is WarriorBase targetWarrior && targetWarrior.CheckEvasion())
                 {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine($"{Name} атакует {target.Name}, но {target.Name} уклоняется от атаки!");
+                    Console.ResetColor();
                     return;
                 }
-                else
-                {
-                    target.TakeDamage(damage, isCritical);
-                }
+                target.TakeDamage(damage, isCritical);
             }
             else
             {
@@ -68,7 +69,7 @@ namespace ConsoleApp1.LogicGame
             }
         }
 
-        public virtual void TakeDamage(int baseDamage, bool isCritical) // Базовый урон + крит
+        public virtual void TakeDamage(int baseDamage, bool isCritical) // урон + крит
         {
             int damage = baseDamage;
             if (!isCritical)
@@ -190,7 +191,7 @@ namespace ConsoleApp1.LogicGame
             }
         }
 
-        public void ExecuteAction(int actionChoice, IWarrior target, bool isPlayer) // Выполнение действия
+        public virtual void ExecuteAction(int actionChoice, IWarrior target, bool isPlayer) // Выполнение действия
         {
             if (!CanPerformAction(actionChoice, target))
             {
@@ -229,13 +230,17 @@ namespace ConsoleApp1.LogicGame
         {
             Mana = Math.Max(0, Mana - amount);
         }
+        public void DrainArmor(int amount) // Сброс брони
+        {
+            Armor = Math.Max(0, Armor - amount);
+        }
 
         public virtual bool CheckEvasion()  // Проверка уклонения 
         {
             if (RandomNumberGenerator.NextDouble() < EvasionChance) return true;
             return false;
         }
-        public virtual int ChooseAiAction(IWarrior target, bool isPlayer) // Выбор действия ИИ
+        public virtual int ChooseAiAction(IWarrior target) // Выбор действия ИИ
         {
             if (Stamina <= 10 ) 
             {
@@ -243,37 +248,37 @@ namespace ConsoleApp1.LogicGame
             }
             if (Health < MaxHealth / 3 && Stamina >= HEAL_STAMINA_COST)
             {
-                return RandomNumberGenerator.NextDouble() < 0.5 ? 4 : Generating_valid_values(target); // 50% шанс на лечение, иначе случайное действие
+                return RandomNumberGenerator.NextDouble() < 0.4 ? 4 : Generating_valid_values(this); // 50% шанс на лечение, иначе случайное действие
             }
-            if (Stamina >= BASE_ATTACK_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.35)
+            if (Stamina >= BASE_ATTACK_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.6)
             {
-                if (target.Health < MaxHealth / 3 && Stamina >= BASE_ATTACK_STAMINA_COST)
+                if (target.Health < target.MaxHealth / 3)
                 {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 1 : Generating_valid_values(target); // 70% шанс на атаку, иначе случайное действие
+                    return RandomNumberGenerator.NextDouble() < 0.9 ? 1 : Generating_valid_values(this); // 50% шанс на атаку, иначе случайное действие
                 }
-                return RandomNumberGenerator.NextDouble() < 0.25 ? 1 : Generating_valid_values(target); // 35% шанс на атаку, иначе случайное действие
+                return RandomNumberGenerator.NextDouble() < 0.5 ? 1 : Generating_valid_values(this); // 25% шанс на атаку, иначе случайное действие
             }
             if (Stamina >= DEFEND_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.3)
             {
-                if (target.Stamina < target.MaxStamina / 2)
+                if (target.Stamina > target.MaxStamina / 2)
                 {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 2 : Generating_valid_values(target); // 50% шанс на защиту, иначе случайное действие
+                    return RandomNumberGenerator.NextDouble() < 0.5 ? 2 : Generating_valid_values(this); // 50% шанс на защиту, иначе случайное действие
                 }
-                return RandomNumberGenerator.NextDouble() < 0.3 ? 2 : Generating_valid_values(target); // 30% шанс на защиту, иначе случайное действие
+                return RandomNumberGenerator.NextDouble() < 0.3 ? 2 : Generating_valid_values(this); // 30% шанс на защиту, иначе случайное действие
             }
-            return Generating_valid_values(target); // Случайное действие
+            return Generating_valid_values(this); // Случайное действие
 
         }
         public static int Generating_valid_values(IWarrior target) // Генерация случайного действия, которое возможно выполнить
         {
-            int targetAction = RandomNumberGenerator.Next(1, 5);
+            int targetAction = RandomNumberGenerator.Next(1, target.CountActions + 1);
             while (true)
             {
                 if (target.CanPerformAction(targetAction, target))
                 {
                     return targetAction; // Возвращаем случайное действие, если оно возможно
                 }
-                targetAction = RandomNumberGenerator.Next(1, 5); // Иначе выбираем другое действие
+                targetAction = RandomNumberGenerator.Next(1, target.CountActions + 1); // Иначе выбираем другое действие
             }
         }
     }

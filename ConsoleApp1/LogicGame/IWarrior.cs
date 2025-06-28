@@ -9,17 +9,18 @@ namespace ConsoleApp1.LogicGame
         string Name { get; } // ИМЯ
         string ClassName { get; } // Класс
         int Health { get; set; } // ХП
-        int MaxHealth { get; } // МАХ ХП
+        int MaxHealth { get; set; } // МАХ ХП
         int Stamina { get; set; }// Стамина
-        int MaxStamina { get; } // МАХ СТАМИНА
+        int MaxStamina { get; set; } // МАХ СТАМИНА
         int Mana { get; set; } // Мана
-        int MaxMana { get; } // МАХ МАНА
-        int AttackDamage { get; } // Урон 
-        int Armor { get; } // Броня
-        double CritChance { get; } // Крит шанс
-        double EvasionChance { get; } // Уворот шанс
+        int MaxMana { get; set; } // МАХ МАНА
+        int AttackDamage { get; set; } // Урон 
+        int Armor { get; set; } // Броня
+        double CritChance { get; set; } // Крит шанс
+        double EvasionChance { get; set; } // Уворот шанс
         bool IsDefending { get; set; } // укреплённость
         bool IsAlive { get; } // Жив ? Да : Нет
+        public abstract int CountActions { get; }  // Количество действий в текущем ходе
 
         void PerformBaseAttack(IWarrior target); //Баз атака
         void PerformDefend();// Баз защита
@@ -35,6 +36,7 @@ namespace ConsoleApp1.LogicGame
         void ApplyEffect(Effect effect); // Применить эффект
         void DrainStamina(int amount);// Сброс стамины
         void DrainMana(int amount);// Сброс маны
-        public int ChooseAiAction(IWarrior target, bool isPlayer); // Выбор действия ИИ
+        void DrainArmor(int amount); // Сброс брони
+        public int ChooseAiAction(IWarrior target); // Выбор действия ИИ
     }
 }
