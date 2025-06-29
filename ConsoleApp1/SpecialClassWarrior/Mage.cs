@@ -38,11 +38,13 @@ namespace ConsoleApp1.SpecialClassWarrior
                 }
                 else
                 {
-                    if (RandomNumberGenerator.NextDouble() < 0.34 || isCritical)
+                    if (RandomNumberGenerator.NextDouble() < 0.95 || isCritical)
                     {
                         target.ApplyEffect(Dot.Fire);
                         target.TakeDamage(damage, isCritical);
+                        Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine($"{Name} наносит  урон Огненным шаром по {target.Name} и накладывает эффект Огня!");
+                        Console.ResetColor();
                     }
                     else
                     {
@@ -60,9 +62,9 @@ namespace ConsoleApp1.SpecialClassWarrior
         }
         public void Blizzard(IWarrior target)
         {
-            if (Mana >= 60 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5)
+            if (Mana >= 65 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5)
             {
-                DrainMana(60);
+                DrainMana(65);
                 DrainStamina(BASE_ATTACK_STAMINA_COST * 3 + 5);
                 int damage = (int)(AttackDamage * 1.2);
                 bool isCritical = RandomNumberGenerator.NextDouble() < CritChance;
@@ -72,7 +74,7 @@ namespace ConsoleApp1.SpecialClassWarrior
                 }
                 else
                 {
-                    target.ApplyEffect(Dot.SnowGrave);
+                    target.ActiveEffects.Add(Dot.SnowGrave);
                     target.TakeDamage(damage, isCritical);
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine($"{Name} наносит урон Ледяным штормом по {target.Name} и накладывает эффект Ледяной могилы!");
@@ -86,32 +88,23 @@ namespace ConsoleApp1.SpecialClassWarrior
         }
         public void SoulControl(IWarrior target)
         {
-            if (Mana >= 65 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5)
+            if (Mana >= 75 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5)
             {
-                DrainMana(65);
+                DrainMana(75);
                 DrainStamina(BASE_ATTACK_STAMINA_COST * 3);
                 int damage = (int)(AttackDamage * 1.5);
                 bool isCritical = RandomNumberGenerator.NextDouble() < CritChance;
                 MaxHealth += 30; // Увеличиваем максимальное здоровье на 30
                 Health = Math.Min(MaxHealth, Health + 40);
                 AttackDamage += 2; // Увеличиваем урон на 2
-                foreach (var effect in ActiveEffects)
-                {
-                    if (!effect.IsPositive)
-                    {
-                        effect.RemoveEffect(this); // Удаляем отрицательные эффекты с себя
-                    }
-                }
-                foreach (var effect in target.ActiveEffects)
-                {
-                    if (effect.IsPositive)
-                    {
-                        effect.RemoveEffect(target); // Удаляем положительные эффекты с противника
-                    }
-                }
+                Armor += 1; // Увеличиваем броню на 2
+
+                ActiveEffects.RemoveAll(effect => !effect.IsPositive);
+                target.ActiveEffects.RemoveAll(effect => effect.IsPositive);
+
                 Console.ForegroundColor = ConsoleColor.DarkMagenta;
                 Console.WriteLine($"{Name} использует Контроль души на {target.Name}!");
-                Console.WriteLine($"{Name} восстанавливает 40 здоровья, увеличивает максимальное здоровье на 30 и урон на 2!");
+                Console.WriteLine($"{Name} восстанавливает 40 здоровья, увеличивает максимальное здоровье на 30 и урон с бронёй на 2!");
                 Console.WriteLine($"{Name} Сбросил с себя все негативные эффекты ,а с {target.Name} все положительные");
                 Console.ResetColor();
                 target.TakeDamage(damage, isCritical);
@@ -131,8 +124,8 @@ namespace ConsoleApp1.SpecialClassWarrior
         {
             List<string> actions = base.GetActionList();
             actions.Add($"5. Огненный шар  (Стоимость: {BASE_ATTACK_STAMINA_COST} стамины и {25} маны)");
-            actions.Add($"6. Ледяной шторм (Стоимость: {BASE_ATTACK_STAMINA_COST * 3 + 5} стамины и {60} маны)");
-            actions.Add($"7. Контроль души (Стоимость: {BASE_ATTACK_STAMINA_COST * 3 + 5} стамины и {70} маны)");
+            actions.Add($"6. Ледяной шторм (Стоимость: {BASE_ATTACK_STAMINA_COST * 3 + 5} стамины и {65} маны)");
+            actions.Add($"7. Контроль души (Стоимость: {BASE_ATTACK_STAMINA_COST * 3 + 5} стамины и {75} маны)");
             actions[2] = $"3. Пропустить ход (Восстанавливает {SKIP_STAMINA_GAIN} стамины и {30} маны)"; // Обновляем действие пропуска хода
             return actions;
         }
@@ -141,8 +134,8 @@ namespace ConsoleApp1.SpecialClassWarrior
             switch (actionChoice)
             {
                 case 5: return Mana >= 25 && Stamina >= BASE_ATTACK_STAMINA_COST; // Огненный шар
-                case 6: return Mana >= 60 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5; // Ледяной шторм
-                case 7: return Mana >= 65 && Stamina >= BASE_ATTACK_STAMINA_COST * 3; // Контроль души
+                case 6: return Mana >= 65 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5; // Ледяной шторм
+                case 7: return Mana >= 75 && Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5; // Контроль души
                 default: return base.CanPerformAction(actionChoice, target); // Остальные действия
             }
         }
@@ -191,46 +184,49 @@ namespace ConsoleApp1.SpecialClassWarrior
                 {
                     case 5: // Огненный шар
                         score = 20;
-                        score += Stamina >= BASE_ATTACK_STAMINA_COST ? AttackDamage / (float)target.MaxHealth * 10 : 0;
+                        score += Stamina >= BASE_ATTACK_STAMINA_COST ? AttackDamage / (float)target.Health * 10 : 0;
                         score += RandomNumberGenerator.Next(0, 40); // Случайный бонус для атаки
-                        if (target.ActiveEffects.Any(e => e.Name == "Огонь")) score -= 5;
+                        if (target.ActiveEffects.Any(e => e.Name == "Огонь")) score += 15;
                         if (target.ActiveEffects.Any(e => e.Name == "Снежная могила")) score -= 100; 
 
                         break;
                     case 6: // Ледяной шторм
                         if (target.Health > target.MaxHealth / 2)
                         {
-                            score = 30; // Если здоровье противника высокое, приоритет на Ледяной шторм
+                            score = 40; // Если здоровье противника высокое, приоритет на Ледяной шторм
                         }
                         else
                         {
-                            score = 50; // Если здоровье противника низкое, приоритет на Ледяной шторм
+                            score = 20; // Если здоровье противника низкое, приоритет на Ледяной шторм
                         }
                         score += 20; 
                         score += target.Stamina > target.MaxStamina / 2 ? 50 : 0;
                         score += Health > 0 ? (float)MaxHealth / Health * 8 : 100;
+                        score += RandomNumberGenerator.Next(0, 40);
+                        score -= target.EvasionChance > 0 ? (float)(target.EvasionChance * 200) : 100; // Учитываем шанс уклонения противника
+                        score += target.Stamina > (float)(target.MaxStamina * 0.9) ? 1000 : 0;
                         break;
                     case 7: // Контроль души
                         score = 80;
                         float negstivEffectScore = ActiveEffects.Count(e => !e.IsPositive) * 15; // Считаем количество отрицательных эффектов
                         float positiveEffectScore = target.ActiveEffects.Count(e => e.IsPositive) * 10; // Считаем количество положительных эффектов у противника
                         score += (negstivEffectScore + positiveEffectScore) / 2;
-                        score += Health > 0 ? (float)MaxHealth / Health * 10 : 100; // Если здоровье низкое, контроль души более приоритетен
+                        score += Health > 0 ? (float)MaxHealth / Health * 20 : 100; // Если здоровье низкое, контроль души более приоритетен
                         score += RandomNumberGenerator.Next(0, 40);
                         break;
                     case 1: // Атака
                         score = Stamina >= BASE_ATTACK_STAMINA_COST ? AttackDamage / (float)target.MaxHealth * 10 : 0;
-                        score += RandomNumberGenerator.Next(0, 40); // Случайный бонус для атаки
                         break;
                     case 2: // Защита
                         score = Stamina >= DEFEND_STAMINA_COST ? 20 : 0;
-                        score += target.Stamina > target.MaxStamina / 2 ? 50 : 0; // Если у противника много стамины, защита более приоритетна
+                        score += target.Stamina > target.MaxStamina * 0.9 ? 20 : 0; // Если у противника много стамины, защита более приоритетна
                         break;
                     case 3: // Пропуск хода
                         float scoreStamina = Stamina > 0 ? (float)MaxStamina / Stamina * 10 : 100;
                         float scoreMana = Mana > 0 ? (float)MaxMana / Mana * 10 : 100;
                         score = (scoreStamina + (float)(scoreMana * 1.4) / 2 + RandomNumberGenerator.Next(0, 20));
                         score += (float)MaxHealth / Health * 4;
+                        score += Health < MaxHealth / 2 && Stamina < MaxStamina / 2 && Mana < 45 ? 100 : 0;
                         break;
                     case 4: // Лечение
                         score = (Health > 0 && Stamina >= HEAL_STAMINA_COST) ? (float)MaxHealth / Health * 10 : 0;

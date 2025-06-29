@@ -17,8 +17,8 @@ namespace ConsoleApp1.SpecialClassWarrior
                 name,
                 health: 90,
                 stamina: 80,
-                attackDamage: 19,
-                armor: 6,
+                attackDamage: 22,
+                armor: 8,
                 mana: 0,
                 critChance: 0.25,
                 evasionChance: 0.25
@@ -26,7 +26,7 @@ namespace ConsoleApp1.SpecialClassWarrior
         { }
         public void MultipleShot(IWarrior target)
         {
-            int damage = (int)(AttackDamage * 1.8 / 8);
+            int damage = (int)(AttackDamage * 1.6 / 8);
             if (Stamina >= BASE_ATTACK_STAMINA_COST + 5)
             {
                 if (target.ActiveEffects.Any(e => e.Name == "Кровотечение"))
@@ -70,8 +70,9 @@ namespace ConsoleApp1.SpecialClassWarrior
             {
                 DrainStamina(DEFEND_STAMINA_COST * 2);
                 ApplyEffect(Dot.Stealth); // Применение эффекта Скрытность
+                Health = Math.Min(MaxHealth, Health + 20);
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"{Name} использует Скрытность!");
+                Console.WriteLine($"{Name} использует Скрытность! и востонавливает 20 HP");
                 Console.ResetColor();
             }
             else
@@ -84,10 +85,10 @@ namespace ConsoleApp1.SpecialClassWarrior
 
         public void AccurateShot(IWarrior target)
         {
-            if (Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5)
+            if (Stamina >= BASE_ATTACK_STAMINA_COST * 2 + 5)
             {
-                DrainStamina(BASE_ATTACK_STAMINA_COST * 3 + 5);
-                target.ApplyEffect(Dot.Bleeding); // Применение эффекта Кровотечение
+                DrainStamina(BASE_ATTACK_STAMINA_COST * 2 + 5);
+                target.ActiveEffects.Add(Dot.Bleeding); // Применение эффекта Кровотечение
                 target.TakeDamage(AttackDamage, true); // Двойной урон
                 Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.WriteLine($"{Name} наносит Точный выстрел по {target.Name} с эффектом Кровотечение!");
@@ -169,16 +170,17 @@ namespace ConsoleApp1.SpecialClassWarrior
                     case 5:
                         score = 20;
                         score += Stamina >= BASE_ATTACK_STAMINA_COST + 5 ? AttackDamage / (float)target.MaxHealth * 10 : 0;
-                        score += target.ActiveEffects.Any(e => e.Name == "Кровотечение") ? 100 : 0; // Множественный выстрел
+                        score += target.ActiveEffects.Any(e => e.Name == "Кровотечение") ? 100 : -60; // Множественный выстрел
                         score += RandomNumberGenerator.Next(0, 40);
                         break;
                      case 6:
                         score = 20; 
                         score += Health > 0 ? MaxHealth / Health * 10 : 0; // Уклонение в тень
-                        score += RandomNumberGenerator.Next(0, 40);
+                        score += target.Stamina > target.MaxStamina / 2 && Health < MaxHealth / 2 ? 60 : 0; // Если у противника много стамины, уклонение более приоритетно
+                        score -= ActiveEffects.Any(e => e.Name == "Скрытность") ? -100 : 0;
                         break;
                      case 7: // Точный выстрел
-                        score = 25;
+                        score = 30;
                         score += Stamina >= BASE_ATTACK_STAMINA_COST * 3 + 5? AttackDamage / (float)target.MaxHealth * 10 : 0;
                         if (!target.ActiveEffects.Any(e => e.Name == "Кровотечение")) 
                         {
@@ -196,6 +198,7 @@ namespace ConsoleApp1.SpecialClassWarrior
                         break;
                     case 3: // Пропуск хода
                         score = Stamina > 0 ? (float)MaxStamina / Stamina * 10 : 100; // Если стамина 0 — максимальный приоритет
+                        score += (float)MaxHealth / Health * 4;
                         break;
                     case 4: // Лечение
                         score = (Health > 0 && Stamina >= HEAL_STAMINA_COST) ? (float)MaxHealth / Health * 10 : 0;

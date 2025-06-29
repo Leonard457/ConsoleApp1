@@ -129,7 +129,7 @@ namespace ConsoleApp1.LogicGame
         public virtual void ResetTurnState()
         {
             // Если сработало уклонение — сбросить только отрицательные эффекты
-            if (CheckEvasion())
+            if (CheckEvasion() && RandomNumberGenerator.NextDouble() > EvasionChance)
             {
                 for (int i = ActiveEffects.Count - 1; i >= 0; i--)
                 {

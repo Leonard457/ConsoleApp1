@@ -12,7 +12,7 @@ namespace ConsoleApp1.SpecialClassWarrior
                 health: 120,
                 stamina: 80,
                 attackDamage: 26,
-                armor: 10,
+                armor: 12,
                 mana: 0,
                 critChance: 0.1,
                 evasionChance: 0.1
@@ -33,6 +33,13 @@ namespace ConsoleApp1.SpecialClassWarrior
                     Console.WriteLine($"{targetWarrior.Name} уклонился от Щитового Удара!");
                     Console.ResetColor();
                     return;
+                }
+                if(0.05 > RandomNumberGenerator.NextDouble() || isCritical)
+                {
+                    target.ApplyEffect(Dot.Stun); // Применение эффекта оглушения
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"{Name} накладывает эффект Оглушение на {target.Name}!");
+                    Console.ResetColor();
                 }
                 target.TakeDamage(damage, isCritical);
             }
@@ -90,6 +97,13 @@ namespace ConsoleApp1.SpecialClassWarrior
                 Console.ForegroundColor = ConsoleColor.Blue;
                 Console.WriteLine($"Святой удар меняет броню {Name} + 1 ,а {target.Name} -1 ");
                 Console.ResetColor();
+                if (0.35 > RandomNumberGenerator.NextDouble() || isCritical)
+                {
+
+                    target.ApplyEffect(Dot.Stun);
+                    Console.WriteLine($"{target.Name} оглушен от Святого Удара!");
+                }
+                
             }
             else
             {
@@ -179,6 +193,7 @@ namespace ConsoleApp1.SpecialClassWarrior
                         break;
                     case 3: // Пропустить ход
                         score = Stamina > 0 ? (float)MaxStamina / Stamina * 10 : 100; // Если стамина 0 — максимальный приоритет
+                        score += (float)MaxHealth / Health * 4;
                         break;
                     case 4: // Лечение
                         score += 5;

@@ -45,10 +45,27 @@ namespace ConsoleApp1.LogicGame
                 turnCounter++;
                 if (turnCounter % 30 == 0)
                 {
-                    // Увеличиваем урон обоим бойцам
                     if (player1 is WarriorBase wb1) wb1.IncreaseAttackDamage(5);
                     if (player2 is WarriorBase wb2) wb2.IncreaseAttackDamage(5);
+                    // Увеличиваем базовый урон дотов
+                    // Dot.BaseDamege.Damage += 1; // ← не работает, потому что BaseDamege не инициализирован и не используется в эффектах
+
+                    // Вместо этого увеличиваем beseDamege.Damage, который реально используется в эффектах:
+                    // Fix for CS0201: Ensure the expression is valid and performs an operation
+                    var baseDotField = typeof(ConsoleApp1.LogicGame.Dot)
+                        .GetField("BaseDamege", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+                    if (baseDotField != null)
+                    {
+                        var baseDot = baseDotField.GetValue(null) as Effect;
+                        if (baseDot != null)
+                        {
+                            baseDot.Damage += 1;
+                        }
+                    }
+
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    Console.WriteLine($"Увеличен урон всех эффектов (наносящих урон) на +1");
                     Console.WriteLine($"Прошло 30 ходов! Урон всех бойцов увеличен на +5!");
                     Console.ResetColor();
                 }
@@ -159,18 +176,19 @@ namespace ConsoleApp1.LogicGame
             Console.WriteLine("2. Крестьянин");
             Console.WriteLine("3. Лучник ");
             Console.WriteLine("4. Маг "); 
+            Console.WriteLine("5. Разбойник");
 
             int classChoice;
             if (isHumanControlled)
             {
                 while (true)
                 {
-                    Console.Write("Ваш выбор (1-4): ");
+                    Console.Write("Ваш выбор (1-5): ");
                     if (int.TryParse(Console.ReadLine(), out classChoice) && classChoice >= 1 && classChoice <= 4)
                     {
                         break;
                     }
-                    Console.WriteLine("Неверный ввод. Введите число от 1 до 4.");
+                    Console.WriteLine("Неверный ввод. Введите число от 1 до 5.");
                 }
             }
             else
@@ -187,6 +205,7 @@ namespace ConsoleApp1.LogicGame
                 case 2: selectedWarrior = new Peasant(name); break;
                 case 3: selectedWarrior = new Archer(name); break;
                 case 4: selectedWarrior = new Mage(name); break;
+                case 5: selectedWarrior = new Rogue(name); break;
                 default: throw new InvalidOperationException("Неверный выбор класса");
             }
             Console.WriteLine($"Создан {selectedWarrior.ClassName} {selectedWarrior.Name}");
