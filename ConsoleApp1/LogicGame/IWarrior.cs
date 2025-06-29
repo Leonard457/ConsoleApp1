@@ -37,6 +37,8 @@ namespace ConsoleApp1.LogicGame
         void DrainStamina(int amount);// Сброс стамины
         void DrainMana(int amount);// Сброс маны
         void DrainArmor(int amount); // Сброс брони
+
+        void DrainHP(int amount); // Сброс ХП
         public int ChooseAiAction(IWarrior target); // Выбор действия ИИ
     }
 }

@@ -234,6 +234,10 @@ namespace ConsoleApp1.LogicGame
         {
             Armor = Math.Max(0, Armor - amount);
         }
+        public void DrainHP(int amount)
+        {
+            Health = Math.Max(0, Health - amount);
+        }
 
         public virtual bool CheckEvasion()  // Проверка уклонения 
         {
@@ -242,31 +246,51 @@ namespace ConsoleApp1.LogicGame
         }
         public virtual int ChooseAiAction(IWarrior target) // Выбор действия ИИ
         {
-            if (Stamina <= 10 ) 
+            // 1. ПОДГОТОВКА
+            var possibleActions = new List<int>();
+            for (int i = 1; i <= CountActions; i++)
             {
-                return 3; // Пропустить ход, если стамины мало
-            }
-            if (Health < MaxHealth / 3 && Stamina >= HEAL_STAMINA_COST)
-            {
-                return RandomNumberGenerator.NextDouble() < 0.4 ? 4 : Generating_valid_values(this); // 50% шанс на лечение, иначе случайное действие
-            }
-            if (Stamina >= BASE_ATTACK_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.6)
-            {
-                if (target.Health < target.MaxHealth / 3)
+                if (this.CanPerformAction(i, target))
                 {
-                    return RandomNumberGenerator.NextDouble() < 0.9 ? 1 : Generating_valid_values(this); // 50% шанс на атаку, иначе случайное действие
+                    possibleActions.Add(i);
                 }
-                return RandomNumberGenerator.NextDouble() < 0.5 ? 1 : Generating_valid_values(this); // 25% шанс на атаку, иначе случайное действие
             }
-            if (Stamina >= DEFEND_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.3)
+            if (possibleActions.Count == 0)
             {
-                if (target.Stamina > target.MaxStamina / 2)
-                {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 2 : Generating_valid_values(this); // 50% шанс на защиту, иначе случайное действие
-                }
-                return RandomNumberGenerator.NextDouble() < 0.3 ? 2 : Generating_valid_values(this); // 30% шанс на защиту, иначе случайное действие
+                return 3;
             }
-            return Generating_valid_values(this); // Случайное действие
+            // 2. ИНИЦИАЛИЗАЦИЯ
+            var actionScores = new Dictionary<int, float>();
+            // 3. ОЦЕНКА
+            foreach (var action in possibleActions)
+            {
+                float score = 0;
+                switch (action)
+                {
+                    case 1: // Атака
+                        score = Stamina >= BASE_ATTACK_STAMINA_COST ? AttackDamage / (float)target.MaxHealth * 20 : 0;
+                        score += RandomNumberGenerator.Next(0, 40); // Случайный бонус для атаки
+                        break;
+                    case 2: // Защита
+                        score = Stamina >= DEFEND_STAMINA_COST ? 20 : 0;
+                        score += target.Stamina > target.MaxStamina / 2 ? 50 : 0; // Если у противника много стамины, защита более приоритетна
+                        break;
+                    case 3: // Пропуск хода
+                        score = Stamina > 0 ? (float)MaxStamina / Stamina * 10 : 100; // Если стамина 0 — максимальный приоритет
+                        break;
+                    case 4: // Лечение
+                        score = (Health > 0 && Stamina >= HEAL_STAMINA_COST) ? (float)MaxHealth / Health * 20 : 0;
+                        break;
+                }
+                actionScores[action] = score;
+            }
+            // 4. ВЫБОР с элементом случайности
+            var finalScores = actionScores.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value + RandomNumberGenerator.Next(0, 50)
+            );
+            int bestAction = finalScores.OrderByDescending(kvp => kvp.Value).First().Key;
+            return bestAction;
 
         }
         public static int Generating_valid_values(IWarrior target) // Генерация случайного действия, которое возможно выполнить

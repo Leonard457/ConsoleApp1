@@ -157,23 +157,26 @@ namespace ConsoleApp1.LogicGame
             Console.WriteLine("Выберите класс для " + name + ":");
             Console.WriteLine("1. Рыцарь");
             Console.WriteLine("2. Крестьянин");
+            Console.WriteLine("3. Лучник ");
+            Console.WriteLine("4. Маг "); 
 
             int classChoice;
             if (isHumanControlled)
             {
                 while (true)
                 {
-                    Console.Write("Ваш выбор (1-2): ");
-                    if (int.TryParse(Console.ReadLine(), out classChoice) && classChoice >= 1 && classChoice <= 2)
+                    Console.Write("Ваш выбор (1-4): ");
+                    if (int.TryParse(Console.ReadLine(), out classChoice) && classChoice >= 1 && classChoice <= 4)
                     {
                         break;
                     }
-                    Console.WriteLine("Неверный ввод. Введите число от 1 до 2.");
+                    Console.WriteLine("Неверный ввод. Введите число от 1 до 4.");
                 }
             }
             else
             {
-                classChoice = RandomNumberGenerator.Next(1, 3);
+                Console.WriteLine("ИИ выбирает класс случайным образом...(пока за него)");
+                classChoice = Convert.ToInt32(Console.ReadLine()); // Случайный выбор класса для ИИ
                 Console.WriteLine($"{name} (ИИ) выбирает класс номер {classChoice}.");
             }
 
@@ -182,6 +185,8 @@ namespace ConsoleApp1.LogicGame
             {
                 case 1: selectedWarrior = new Knight(name); break;
                 case 2: selectedWarrior = new Peasant(name); break;
+                case 3: selectedWarrior = new Archer(name); break;
+                case 4: selectedWarrior = new Mage(name); break;
                 default: throw new InvalidOperationException("Неверный выбор класса");
             }
             Console.WriteLine($"Создан {selectedWarrior.ClassName} {selectedWarrior.Name}");

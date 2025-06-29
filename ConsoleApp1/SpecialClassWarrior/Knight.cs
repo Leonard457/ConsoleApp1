@@ -11,8 +11,8 @@ namespace ConsoleApp1.SpecialClassWarrior
                 name,
                 health: 120,
                 stamina: 80,
-                attackDamage: 16,
-                armor: 8,
+                attackDamage: 26,
+                armor: 10,
                 mana: 0,
                 critChance: 0.1,
                 evasionChance: 0.1
@@ -47,33 +47,7 @@ namespace ConsoleApp1.SpecialClassWarrior
             if (Stamina >= cost)
             {
                 DrainStamina(cost);
-                Effect Defender = new Effect()
-                {
-                    Name = "Режим Крепость",
-                    Duration = 3,
-                    ApplyEffect = (warrior) =>
-                    {
-                        warrior.IsDefending = true;
-                        warrior.Armor += 10; // Увеличение брони на 10
-                        Console.ForegroundColor = ConsoleColor.Cyan;
-                        Console.WriteLine($"{warrior.Name} активирован Режим Крепости! Броня увеличена на 10.");
-                        Console.ResetColor();
-                    },
-                    TickEffect = (warrior) =>
-                    {
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.WriteLine($"{warrior.Name} находится в Режиме Крепости. Осталось ходов: {warrior.ActiveEffects.FirstOrDefault(e => e.Name == "Режим Крепость")?.Duration}");
-                        Console.ResetColor();
-                    },
-                    RemoveEffect = (warrior) =>
-                    {
-                        warrior.IsDefending = false;
-                        warrior.Armor -= 10; // Восстановление брони
-                        Console.WriteLine($"{warrior.Name} вышел из Режима Крепости! Броня восстановлена.");
-                    },
-                    IsPositive = true // Положительный эффект
-                };
-                ApplyEffect(Defender);
+                ApplyEffect(Dot.Defender);// Применение эффекта Режим Крепость
             }
             else
             {
@@ -94,8 +68,8 @@ namespace ConsoleApp1.SpecialClassWarrior
                 if (target is WarriorBase targetWarrior && targetWarrior.CheckEvasion())
                 {
                     Console.WriteLine($"{targetWarrior.Name} уклонился от Святого Удара! Но был на грани!");
-                    target.DrainStamina(10); // Сброс стамины противника
-                    Console.WriteLine($"{targetWarrior.Name} потерял 10 стамины при увороте от Святого Удара!");
+                    target.DrainStamina(100); // Сброс стамины противника
+                    Console.WriteLine($"{targetWarrior.Name} потерял много стамины при увороте от Святого Удара!");
                     return;
                 }
                 target.TakeDamage(baseDamage, isCritical);
@@ -171,48 +145,76 @@ namespace ConsoleApp1.SpecialClassWarrior
         }
         public override int ChooseAiAction(IWarrior target)
         {
-            // Логика выбора действия ИИ для Рыцаря
-            if (Stamina <= 10)
+            // 1. ПОДГОТОВКА
+            var possibleActions = new List<int>();
+            for (int i = 1; i <= CountActions; i++)
             {
-                return 3; // Пропустить ход, если стамины мало
-            }
-            if (Health < MaxHealth / 4 && Stamina >= BASE_ATTACK_STAMINA_COST * 4)
-            {
-                return RandomNumberGenerator.NextDouble() < 0.8 ? 7 : Generating_valid_values(this); // Использовать Святой Удар или Базовую атаку с вероятностью 50%
-            }
-            if (Stamina >= DEFEND_STAMINA_COST * 2 && RandomNumberGenerator.NextDouble() < 0.3)
-            {
-                if (target.Stamina > target.MaxStamina / 2)
+                if (this.CanPerformAction(i, target))
                 {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 6 : Generating_valid_values(this); // Использовать Режим Крепость или Базовую атаку с вероятностью 50%
+                    possibleActions.Add(i);
                 }
-                return RandomNumberGenerator.NextDouble() < 0.25 ? 6 : Generating_valid_values(this); // Использовать Режим Крепость или Базовую атаку с вероятностью 25%
             }
-            if (Stamina >= BASE_ATTACK_STAMINA_COST + 5 && RandomNumberGenerator.NextDouble() < 0.9)
+
+            if (possibleActions.Count == 0)
             {
-                return RandomNumberGenerator.NextDouble() < 0.6 ? 5 : Generating_valid_values(this); // Использовать Щитовой Удар или Базовую атаку с вероятностью 50%
+                return 3;
             }
-            if (Health < MaxHealth / 3 && Stamina >= HEAL_STAMINA_COST)
+
+            // 2. ИНИЦИАЛИЗАЦИЯ
+            var actionScores = new Dictionary<int, float>();
+
+            // 3. ОЦЕНКА
+            foreach (var action in possibleActions)
             {
-                return RandomNumberGenerator.NextDouble() < 0.5 ? 4 : Generating_valid_values(this); // 50% шанс на лечение, иначе случайное действие
-            }
-            if (Stamina >= BASE_ATTACK_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.30)
-            {
-                if (target.Health < target.MaxHealth / 3)
+                float score = 0;
+                switch (action)
                 {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 1 : Generating_valid_values(this); // 50% шанс на атаку, иначе случайное действие
+                    case 1: // Базовая Атака
+                        score += 10;
+                        if (target.Health <= this.AttackDamage) score += 50;
+                        break;
+                    case 2: // Защита
+                        score = Stamina >= DEFEND_STAMINA_COST ? 20 : 0;
+                        score += target.Stamina > target.MaxStamina * 0.5 ? 20 : 0;
+                        break;
+                    case 3: // Пропустить ход
+                        score = Stamina > 0 ? (float)MaxStamina / Stamina * 10 : 100; // Если стамина 0 — максимальный приоритет
+                        break;
+                    case 4: // Лечение
+                        score += 5;
+                        score += Health > 0 ? MaxHealth / Health * 10 : 0; // Чем больше здоровья, тем меньше вероятность использования
+                        break;
+                    case 5: // Щитовой Удар
+                        score += 18;
+                        if (target.Health <= (this.AttackDamage + 5)) score += 55;
+                        score += this.Stamina >= BASE_ATTACK_STAMINA_COST + 5 ? 20 : -100;
+                        score += this.ActiveEffects.Any(e => e.Name == "Режим Крепость") ? 20 : 0;
+                        score += RandomNumberGenerator.Next(0, 40);
+                        break;
+                    case 6: // Режим Крепость
+                        score += 15;
+                        if (this.ActiveEffects.Any(e => e.Name == "Режим Крепость")) score -= 200;
+                        else if (this.Health < this.MaxHealth * 0.7) score += 20;
+                        score += target.Stamina > target.MaxStamina * 0.5 ? 30 : 0; // Если противник тратит много стамины
+                        break;
+                    case 7: // Святой Удар
+                        score += 10;
+                        score += Stamina >= BASE_ATTACK_STAMINA_COST * 4 ? 25 : -100;
+                        score += Health > 0 ? MaxHealth / Health * 40: 0; // Чем больше здоровья, тем меньше вероятность использования
+                        score += RandomNumberGenerator.Next(0, 40); // Случайный бонус для Святого Удара
+                        break;
                 }
-                return RandomNumberGenerator.NextDouble() < 0.25 ? 1 : Generating_valid_values(this); // 25% шанс на атаку, иначе случайное действие
+                actionScores[action] = score;
             }
-            if (Stamina >= DEFEND_STAMINA_COST && RandomNumberGenerator.NextDouble() < 0.20)
-            {
-                if (target.Stamina > target.MaxStamina / 2)
-                {
-                    return RandomNumberGenerator.NextDouble() < 0.5 ? 2 : Generating_valid_values(this); // 50% шанс на защиту, иначе случайное действие
-                }
-                return RandomNumberGenerator.NextDouble() < 0.3 ? 2 : Generating_valid_values(this); // 30% шанс на защиту, иначе случайное действие
-            }
-            return Generating_valid_values(this); // Случайное действие
+
+            // 4. ВЫБОР с элементом случайности
+            var finalScores = actionScores.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value + RandomNumberGenerator.Next(0, 40)
+            );
+
+            int bestAction = finalScores.OrderByDescending(kvp => kvp.Value).First().Key;
+            return bestAction;
         }
     }
 }
